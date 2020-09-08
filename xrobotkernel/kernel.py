@@ -49,9 +49,12 @@ class XRobotKernel(Kernel):
         SettingsBuilder(self.suite, self.defaults).visit(model)
         SuiteBuilder(self.suite, self.defaults).visit(model)
 
+        # Strip variables/keyword duplicates
+        self.suite.resource.variables._items = self.strip_duplicates(self.suite.resource.variables)
+        self.suite.resource.keywords._items = self.strip_duplicates(self.suite.resource.keywords)
+
         # Execute suite
         stdout = StringIO()
-
         with TemporaryDirectory() as path:
             result = self.suite.run(outputdir=path, stdout=stdout)
 
@@ -72,3 +75,10 @@ class XRobotKernel(Kernel):
             'payload': [],
             'user_expressions': {},
         }
+
+    def strip_duplicates(self, items):
+        """Remove duplicates from a list of variables/keywords."""
+        new_items = {}
+        for item in items:
+            new_items[item.name] = item
+        return list(new_items.values())
