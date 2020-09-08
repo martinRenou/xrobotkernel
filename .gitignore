@@ -1,1 +1,4 @@
 xrobotkernel/__pycache__/*
+xrobotkernel.egg-info/*
+
+examples/.ipynb_checkpoints/*
