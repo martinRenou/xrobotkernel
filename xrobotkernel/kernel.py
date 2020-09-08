@@ -1,6 +1,5 @@
 """XRobotKernel."""
 from ipykernel.kernelbase import Kernel
-from robot.api import get_tokens
 from robot.parsing.lexer.context import TestCaseFileContext
 from robot.parsing.lexer.lexer import Lexer
 
@@ -23,6 +22,7 @@ class XRobotKernel(Kernel):
     def __init__(self, *args, **kwargs):
         self.context = TestCaseFileContext()
         self.lexer = Lexer(self.context, False, False)
+        self.tokens = []
 
         super(XRobotKernel, self).__init__(*args, **kwargs)
 
@@ -32,7 +32,12 @@ class XRobotKernel(Kernel):
 
         output = ''
 
-        for token in self.lexer.get_tokens():
+        all_tokens = list(self.lexer.get_tokens())
+        new_tokens = all_tokens[len(self.tokens):]
+
+        self.tokens = all_tokens
+
+        for token in new_tokens:
             output += repr(token) + '\n'
 
         if not silent:
