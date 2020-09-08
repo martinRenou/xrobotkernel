@@ -1,7 +1,16 @@
 """XRobotKernel."""
+
+from io import StringIO
+import os
+from tempfile import TemporaryDirectory
+
 from ipykernel.kernelbase import Kernel
-from robot.parsing.lexer.context import TestCaseFileContext
-from robot.parsing.lexer.lexer import Lexer
+
+from robot.api import get_model
+from robot.running.model import TestSuite
+from robot.running.builder.testsettings import TestDefaults
+from robot.running.builder.parsers import ErrorReporter
+from robot.running.builder.transformers import SettingsBuilder, SuiteBuilder
 
 
 class XRobotKernel(Kernel):
@@ -20,27 +29,40 @@ class XRobotKernel(Kernel):
 
 
     def __init__(self, *args, **kwargs):
-        self.context = TestCaseFileContext()
-        self.lexer = Lexer(self.context, False, False)
-        self.tokens = []
+        self.suite = TestSuite(name="Jupyter", source=os.getcwd())
+        self.defaults = TestDefaults(None)
 
         super(XRobotKernel, self).__init__(*args, **kwargs)
 
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=False):
-        self.lexer.input(code)
+        # Remove old tests, this is needed so that we don't run them again
+        self.suite.tests._items = []
 
-        output = ''
+        # Compile AST
+        model = get_model(
+            StringIO(code),
+            data_only=False,
+            curdir=os.getcwd().replace("\\", "\\\\"),
+        )
+        ErrorReporter(code).visit(model)
+        SettingsBuilder(self.suite, self.defaults).visit(model)
+        SuiteBuilder(self.suite, self.defaults).visit(model)
 
-        all_tokens = list(self.lexer.get_tokens())
-        new_tokens = all_tokens[len(self.tokens):]
+        # Execute suite
+        stdout = StringIO()
 
-        self.tokens = all_tokens
-
-        for token in new_tokens:
-            output += repr(token) + '\n'
+        with TemporaryDirectory() as path:
+            result = self.suite.run(outputdir=path, stdout=stdout)
 
         if not silent:
+            stats = result.statistics
+
+            output = 'Failed tests: {}; Passed tests: {}; Total: {};'.format(
+                stats.total.critical.failed, stats.total.critical.passed,
+                stats.total.critical.failed + stats.total.critical.passed
+            )
+
             stream_content = {'name': 'stdout', 'text': output}
             self.send_response(self.iopub_socket, 'stream', stream_content)
 
