@@ -21,7 +21,7 @@ def install_my_kernel_spec(user=False, prefix=None):
         # TODO: Copy any resources
 
         print('Installing Jupyter kernel spec')
-        KernelSpecManager().install_kernel_spec(td, 'echo', user=user, replace=True, prefix=prefix)
+        KernelSpecManager().install_kernel_spec(td, 'echo', user=user, prefix=prefix)
 
 
 def _is_root():
