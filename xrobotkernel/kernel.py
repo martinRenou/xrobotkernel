@@ -11,6 +11,7 @@ from robot.running.model import TestSuite
 from robot.running.builder.testsettings import TestDefaults
 from robot.running.builder.parsers import ErrorReporter
 from robot.running.builder.transformers import SettingsBuilder, SuiteBuilder
+from robot.model.itemlist import ItemList
 
 
 class XRobotKernel(Kernel):
@@ -21,9 +22,11 @@ class XRobotKernel(Kernel):
     language = 'robot'
     language_version = '0.1'
     language_info = {
-        'name': 'robot',
-        'mimetype': 'text/plain',
+        'name': 'XRobot',
+        'mimetype': 'text/x-robotframework',
         'file_extension': '.robot',
+        'codemirror_mode': 'robotframework',
+        'pygments_lexer': 'robotframework',
     }
     banner = "XRobot kernel"
 
@@ -36,9 +39,6 @@ class XRobotKernel(Kernel):
 
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=False):
-        # Remove old tests, this is needed so that we don't run them again
-        self.suite.tests._items = []
-
         # Compile AST
         model = get_model(
             StringIO(code),
@@ -57,6 +57,10 @@ class XRobotKernel(Kernel):
         stdout = StringIO()
         with TemporaryDirectory() as path:
             result = self.suite.run(outputdir=path, stdout=stdout)
+
+        # Remove tests run so far,
+        # this is needed so that we don't run them again in the next execution
+        self.suite.tests._items = []
 
         if not silent:
             stats = result.statistics
